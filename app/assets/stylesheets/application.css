@@ -58,3 +58,12 @@
    list-style-type: none;
    padding: .2em 0;
  }
+
+ .completed {
+   text-decoration: line-through;
+   color: #ccc;
+ }
+
+ label {
+   cursor: pointer;
+ }

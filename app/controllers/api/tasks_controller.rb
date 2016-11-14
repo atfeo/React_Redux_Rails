@@ -12,9 +12,19 @@ class Api::TasksController < ApplicationController
     end
   end
 
+  def update
+    @task = Task.find(params[:id])
+    @task.assign_attributes(task_params)
+    if @task.save
+      render :show, status: :ok
+    else
+      head :unprocessable_entity
+    end
+  end
+
   private
 
   def task_params
-    params.permit(:name)
+    params.permit(:name, :isComplete)
   end
 end

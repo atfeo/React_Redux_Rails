@@ -66,6 +66,8 @@
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+	function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
 	function reducer() {
 	  var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : { tasks: [] };
 	  var action = arguments[1];
@@ -79,6 +81,18 @@
 	      return Object.assign({}, state, { tasks: state.tasks.concat(action.data) });
 	    case 'TEXT_EXISTS':
 	      return Object.assign({}, state, { isText: action.data });
+	    case 'TASK_COMPLETION_CHANGED':
+	      {
+	        var taskIndex = state.tasks.findIndex(function (task) {
+	          return task.id == action.data.id;
+	        });
+	        var newTasks = [].concat(_toConsumableArray(state.tasks.slice(0, taskIndex)), [Object.assign({}, state.tasks[taskIndex], { isComplete: action.data.isComplete })], _toConsumableArray(state.tasks.slice(taskIndex + 1)));
+	        return Object.assign({}, state, { tasks: newTasks });
+	      }
+	    case 'SHOW_ERROR':
+	      return Object.assign({}, state, { isError: true, errorMessage: action.data });
+	    case 'HIDE_ERROR':
+	      return Object.assign({}, state, { isError: false, errorMessage: '' });
 	    default:
 	      return state;
 	  }
@@ -23268,6 +23282,10 @@
 
 	var _taskForm2 = _interopRequireDefault(_taskForm);
 
+	var _errorMessage = __webpack_require__(208);
+
+	var _errorMessage2 = _interopRequireDefault(_errorMessage);
+
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -23286,6 +23304,7 @@
 
 	    _this.handleNewTask = _this.handleNewTask.bind(_this);
 	    _this.handleInputForm = _this.handleInputForm.bind(_this);
+	    _this.handleTaskCompletionChange = _this.handleTaskCompletionChange.bind(_this);
 	    return _this;
 	  }
 
@@ -23305,6 +23324,11 @@
 	      this.props.dispatch(_actions2.default.textExists(value));
 	    }
 	  }, {
+	    key: 'handleTaskCompletionChange',
+	    value: function handleTaskCompletionChange(id, isComplete) {
+	      this.props.dispatch(_actions2.default.toggleComplete(id, isComplete));
+	    }
+	  }, {
 	    key: 'render',
 	    value: function render() {
 	      return _react2.default.createElement(
@@ -23321,8 +23345,14 @@
 	          objects: this.props.tasks,
 	          istext: this.props.isText
 	        }),
+	        this.props.isError ? _react2.default.createElement(_errorMessage2.default, {
+	          message: this.props.errorMessage
+	        }) : null,
 	        this.props.isLoading ? _react2.default.createElement(_loadingIndicator2.default, null) : null,
-	        _react2.default.createElement(_taskList2.default, { tasks: this.props.tasks })
+	        _react2.default.createElement(_taskList2.default, {
+	          tasks: this.props.tasks,
+	          handlecheck: this.handleTaskCompletionChange
+	        })
 	      );
 	    }
 	  }]);
@@ -23333,12 +23363,16 @@
 	function mapStateToProps(state) {
 	  var tasks = state.tasks,
 	      isLoading = state.isLoading,
-	      isText = state.isText;
+	      isText = state.isText,
+	      isError = state.isError,
+	      errorMessage = state.errorMessage;
 
 	  return {
 	    tasks: tasks,
 	    isLoading: isLoading,
-	    isText: isText
+	    isText: isText,
+	    isError: isError,
+	    errorMessage: errorMessage
 	  };
 	}
 
@@ -23353,7 +23387,8 @@
 	module.exports = {
 	  loadTasks: loadTasks,
 	  addTask: addTask,
-	  textExists: textExists
+	  textExists: textExists,
+	  toggleComplete: toggleComplete
 	};
 
 	function loadTasks() {
@@ -23370,6 +23405,7 @@
 	      },
 	      error: function error(xhr, status, err) {
 	        dispatch(toggleLoading(false));
+	        dispatch(tempErrorMessage('API Error'));
 	        console.log('/api/tasks.json', status, err.toString());
 	      }
 	    });
@@ -23398,6 +23434,7 @@
 	      },
 	      error: function error(xhr, status, err) {
 	        dispatch(toggleLoading(false));
+	        dispatch(tempErrorMessage('API Error'));
 	        console.log('/api/tasks.json', status, err.toString());
 	      }
 	    });
@@ -23412,11 +23449,54 @@
 	  return { type: 'TEXT_EXISTS', data: value };
 	}
 
+	function toggleComplete(id, isComplete) {
+	  return function (dispatch) {
+	    $.ajax({
+	      url: '/api/tasks/' + id,
+	      type: 'PATCH',
+	      dataType: 'json',
+	      data: { isComplete: isComplete },
+	      success: function success(res) {
+	        dispatch(completeChanged(res.id, res.isComplete));
+	      },
+	      error: function error(xhr, status, err) {
+	        dispatch(tempErrorMessage('API Error'));
+	        dispatch(completeChanged(id, !isComplete));
+	        console.log('/api/tasks/' + id, status, err.toString());
+	      }
+	    });
+	  };
+	}
+
+	function completeChanged(id, isComplete) {
+	  return {
+	    type: 'TASK_COMPLETION_CHANGED',
+	    data: { id: id, isComplete: isComplete }
+	  };
+	}
+
+	function showError(message) {
+	  return { type: 'SHOW_ERROR', data: message };
+	}
+
+	function hideError() {
+	  return { type: 'HIDE_ERROR' };
+	}
+
+	function tempErrorMessage(message) {
+	  return function (dispatch) {
+	    dispatch(showError(message));
+	    setTimeout(function () {
+	      dispatch(hideError());
+	    }, 2000);
+	  };
+	}
+
 /***/ },
 /* 205 */
 /***/ function(module, exports, __webpack_require__) {
 
-	'use strict';
+	"use strict";
 
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
@@ -23442,20 +23522,40 @@
 	  function TaskList(props) {
 	    _classCallCheck(this, TaskList);
 
-	    return _possibleConstructorReturn(this, (TaskList.__proto__ || Object.getPrototypeOf(TaskList)).call(this, props));
+	    var _this = _possibleConstructorReturn(this, (TaskList.__proto__ || Object.getPrototypeOf(TaskList)).call(this, props));
+
+	    _this.handleCheck = _this.handleCheck.bind(_this);
+	    return _this;
 	  }
 
 	  _createClass(TaskList, [{
-	    key: 'render',
+	    key: "handleCheck",
+	    value: function handleCheck(e) {
+	      this.props.handlecheck(e.target.id, e.target.checked);
+	    }
+	  }, {
+	    key: "render",
 	    value: function render() {
+	      var _this2 = this;
+
 	      return _react2.default.createElement(
-	        'ul',
+	        "ul",
 	        null,
 	        this.props.tasks.map(function (task) {
 	          return _react2.default.createElement(
-	            'li',
+	            "li",
 	            { key: task.id },
-	            task.name
+	            _react2.default.createElement(
+	              "label",
+	              { className: task.isComplete ? "completed" : null },
+	              _react2.default.createElement("input", {
+	                type: "checkbox",
+	                id: task.id,
+	                checked: task.isComplete,
+	                onChange: _this2.handleCheck
+	              }),
+	              task.name
+	            )
 	          );
 	        })
 	      );
@@ -23596,6 +23696,62 @@
 	}(_react2.default.Component);
 
 	exports.default = TaskForm;
+
+/***/ },
+/* 208 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	var _react = __webpack_require__(1);
+
+	var _react2 = _interopRequireDefault(_react);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+	var ErrorMessage = function (_React$Component) {
+	  _inherits(ErrorMessage, _React$Component);
+
+	  function ErrorMessage() {
+	    _classCallCheck(this, ErrorMessage);
+
+	    return _possibleConstructorReturn(this, (ErrorMessage.__proto__ || Object.getPrototypeOf(ErrorMessage)).apply(this, arguments));
+	  }
+
+	  _createClass(ErrorMessage, [{
+	    key: "render",
+	    value: function render() {
+	      var style = {
+	        marginTop: "5px",
+	        paddingLeft: "10px",
+	        color: "white",
+	        backgroundColor: "red"
+	      };
+
+	      return _react2.default.createElement(
+	        "div",
+	        { style: style },
+	        this.props.message
+	      );
+	    }
+	  }]);
+
+	  return ErrorMessage;
+	}(_react2.default.Component);
+
+	exports.default = ErrorMessage;
 
 /***/ }
 /******/ ]);
