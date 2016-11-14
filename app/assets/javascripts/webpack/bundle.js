@@ -75,6 +75,10 @@
 	      return Object.assign({}, state, { tasks: action.data });
 	    case 'TOGGLE_LOADING':
 	      return Object.assign({}, state, { isLoading: action.data });
+	    case 'TASK_ADDED':
+	      return Object.assign({}, state, { tasks: state.tasks.concat(action.data) });
+	    case 'TEXT_EXISTS':
+	      return Object.assign({}, state, { isText: action.data });
 	    default:
 	      return state;
 	  }
@@ -23248,17 +23252,21 @@
 
 	var _reactRedux = __webpack_require__(194);
 
-	var _actions = __webpack_require__(205);
+	var _actions = __webpack_require__(204);
 
 	var _actions2 = _interopRequireDefault(_actions);
 
-	var _taskList = __webpack_require__(204);
+	var _taskList = __webpack_require__(205);
 
 	var _taskList2 = _interopRequireDefault(_taskList);
 
 	var _loadingIndicator = __webpack_require__(206);
 
 	var _loadingIndicator2 = _interopRequireDefault(_loadingIndicator);
+
+	var _taskForm = __webpack_require__(207);
+
+	var _taskForm2 = _interopRequireDefault(_taskForm);
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -23274,7 +23282,11 @@
 	  function TodoApp(props) {
 	    _classCallCheck(this, TodoApp);
 
-	    return _possibleConstructorReturn(this, (TodoApp.__proto__ || Object.getPrototypeOf(TodoApp)).call(this, props));
+	    var _this = _possibleConstructorReturn(this, (TodoApp.__proto__ || Object.getPrototypeOf(TodoApp)).call(this, props));
+
+	    _this.handleNewTask = _this.handleNewTask.bind(_this);
+	    _this.handleInputForm = _this.handleInputForm.bind(_this);
+	    return _this;
 	  }
 
 	  _createClass(TodoApp, [{
@@ -23283,11 +23295,32 @@
 	      this.props.dispatch(_actions2.default.loadTasks());
 	    }
 	  }, {
+	    key: 'handleNewTask',
+	    value: function handleNewTask(task) {
+	      this.props.dispatch(_actions2.default.addTask(task));
+	    }
+	  }, {
+	    key: 'handleInputForm',
+	    value: function handleInputForm(value) {
+	      this.props.dispatch(_actions2.default.textExists(value));
+	    }
+	  }, {
 	    key: 'render',
 	    value: function render() {
 	      return _react2.default.createElement(
 	        'div',
 	        null,
+	        _react2.default.createElement(
+	          'h3',
+	          null,
+	          'Todo List'
+	        ),
+	        _react2.default.createElement(_taskForm2.default, {
+	          addtask: this.handleNewTask,
+	          handlekeyup: this.handleInputForm,
+	          objects: this.props.tasks,
+	          istext: this.props.isText
+	        }),
 	        this.props.isLoading ? _react2.default.createElement(_loadingIndicator2.default, null) : null,
 	        _react2.default.createElement(_taskList2.default, { tasks: this.props.tasks })
 	      );
@@ -23299,11 +23332,13 @@
 
 	function mapStateToProps(state) {
 	  var tasks = state.tasks,
-	      isLoading = state.isLoading;
+	      isLoading = state.isLoading,
+	      isText = state.isText;
 
 	  return {
 	    tasks: tasks,
-	    isLoading: isLoading
+	    isLoading: isLoading,
+	    isText: isText
 	  };
 	}
 
@@ -23311,6 +23346,74 @@
 
 /***/ },
 /* 204 */
+/***/ function(module, exports) {
+
+	'use strict';
+
+	module.exports = {
+	  loadTasks: loadTasks,
+	  addTask: addTask,
+	  textExists: textExists
+	};
+
+	function loadTasks() {
+	  return function (dispatch) {
+	    dispatch(toggleLoading(true));
+	    $.ajax({
+	      url: '/api/tasks.json',
+	      dataType: 'json',
+	      success: function success(res) {
+	        setTimeout(function () {
+	          dispatch(tasksloaded(res.tasks));
+	          dispatch(toggleLoading(false));
+	        }, 2000);
+	      },
+	      error: function error(xhr, status, err) {
+	        dispatch(toggleLoading(false));
+	        console.log('/api/tasks.json', status, err.toString());
+	      }
+	    });
+	  };
+	}
+
+	function tasksloaded(tasks) {
+	  return { type: 'TASKS_LOADED', data: tasks };
+	}
+
+	function toggleLoading(isLoading) {
+	  return { type: 'TOGGLE_LOADING', data: isLoading };
+	}
+
+	function addTask(newTask) {
+	  return function (dispatch) {
+	    dispatch(toggleLoading(true));
+	    $.ajax({
+	      url: '/api/tasks.json',
+	      type: 'POST',
+	      dataType: 'json',
+	      data: { name: newTask },
+	      success: function success(res) {
+	        dispatch(newTaskAdded(res.id, res.name));
+	        dispatch(toggleLoading(false));
+	      },
+	      error: function error(xhr, status, err) {
+	        dispatch(toggleLoading(false));
+	        console.log('/api/tasks.json', status, err.toString());
+	      }
+	    });
+	  };
+	}
+
+	function newTaskAdded(id, name) {
+	  return { type: 'TASK_ADDED', data: { id: id, name: name } };
+	}
+
+	function textExists(value) {
+	  return { type: 'TEXT_EXISTS', data: value };
+	}
+
+/***/ },
+/* 205 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -23365,44 +23468,6 @@
 	exports.default = TaskList;
 
 /***/ },
-/* 205 */
-/***/ function(module, exports) {
-
-	'use strict';
-
-	module.exports = {
-	  loadTasks: loadTasks
-	};
-
-	function loadTasks() {
-	  return function (dispatch) {
-	    dispatch(toggleLoading(true));
-	    $.ajax({
-	      url: '/api/tasks.json',
-	      dataType: 'json',
-	      success: function success(res) {
-	        setTimeout(function () {
-	          dispatch(tasksloaded(res.tasks));
-	          dispatch(toggleLoading(false));
-	        }, 2000);
-	      },
-	      error: function error(xhr, status, err) {
-	        dispatch(toggleLoading(false));
-	        console.log('/api/tasks.json', status, err.toString());
-	      }
-	    });
-	  };
-	}
-
-	function tasksloaded(tasks) {
-	  return { type: 'TASKS_LOADED', data: tasks };
-	}
-
-	function toggleLoading(isLoading) {
-	  return { type: 'TOGGLE_LOADING', data: isLoading };
-	}
-
-/***/ },
 /* 206 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -23450,6 +23515,87 @@
 	}(_react2.default.Component);
 
 	exports.default = LoadingIndicator;
+
+/***/ },
+/* 207 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	var _react = __webpack_require__(1);
+
+	var _react2 = _interopRequireDefault(_react);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+	var TaskForm = function (_React$Component) {
+	  _inherits(TaskForm, _React$Component);
+
+	  function TaskForm(props) {
+	    _classCallCheck(this, TaskForm);
+
+	    var _this = _possibleConstructorReturn(this, (TaskForm.__proto__ || Object.getPrototypeOf(TaskForm)).call(this, props));
+
+	    _this.handleSubmit = _this.handleSubmit.bind(_this);
+	    _this.handleKeyup = _this.handleKeyup.bind(_this);
+	    return _this;
+	  }
+
+	  _createClass(TaskForm, [{
+	    key: 'handleSubmit',
+	    value: function handleSubmit(e) {
+	      e.preventDefault();
+	      this.props.addtask(this.newTask.value);
+	      this.newTask.value = '';
+	    }
+	  }, {
+	    key: 'handleKeyup',
+	    value: function handleKeyup(e) {
+	      this.props.handlekeyup(e.target.value);
+	    }
+	  }, {
+	    key: 'render',
+	    value: function render() {
+	      var _this2 = this;
+
+	      return _react2.default.createElement(
+	        'form',
+	        { onSubmit: this.handleSubmit },
+	        _react2.default.createElement('input', {
+	          type: 'text',
+	          ref: function ref(_ref) {
+	            return _this2.newTask = _ref;
+	          },
+	          onKeyUp: this.handleKeyup, placeholder: 'new task'
+	        }),
+	        _react2.default.createElement(
+	          'button',
+	          {
+	            type: 'submit', disabled: !this.props.istext
+	          },
+	          'Add Task # ',
+	          this.props.objects.length + 1
+	        )
+	      );
+	    }
+	  }]);
+
+	  return TaskForm;
+	}(_react2.default.Component);
+
+	exports.default = TaskForm;
 
 /***/ }
 /******/ ]);
