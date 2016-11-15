@@ -3,6 +3,8 @@ module.exports = {
   addTask,
   textExists,
   toggleComplete,
+  deleteTasks,
+  deleteTask,
 };
 
 function loadTasks() {
@@ -104,4 +106,51 @@ function tempErrorMessage(message) {
       dispatch(hideError());
     }, 2000);
   };
+}
+
+function deleteTasks(ids) {
+  return (dispatch) => {
+    $.ajax({
+      url: '/api/tasks/del_tasks',
+      type: 'DELETE',
+      dataType: 'json',
+      data: { ids },
+      success: () => {
+        dispatch(deletedTasks(ids));
+      },
+      error: (xhr, status, err) => {
+        dispatch(tempErrorMessage('API Error'));
+        dispatch(toggleLoading(false));
+        console.log('/api/tasks/del_tasks', status, err.toString());
+      },
+    });
+  };
+}
+
+function deletedTasks(ids) {
+  return { type: 'DELETED_TASKS', data: ids };
+}
+
+function deleteTask(id) {
+  return (dispatch) => {
+    dispatch(toggleLoading(true));
+    $.ajax({
+      url: `/api/tasks/${id}`,
+      type: 'DELETE',
+      dataType: 'json',
+      success: () => {
+        dispatch(deletedTask(id));
+        dispatch(toggleLoading(false));
+      },
+      error: (xhr, status, err) => {
+        dispatch(tempErrorMessage('API Error'));
+        dispatch(toggleLoading(false));
+        console.log('/api/tasks/del_tasks', status, err.toString());
+      },
+    });
+  };
+}
+
+function deletedTask(id) {
+  return { type: 'DELETED_TASK', data: id };
 }

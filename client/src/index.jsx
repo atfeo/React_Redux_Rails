@@ -30,6 +30,22 @@ function reducer(state = { tasks: [] }, action) {
       return Object.assign({}, state, { isError: true, errorMessage: action.data });
     case 'HIDE_ERROR':
       return Object.assign({}, state, { isError: false, errorMessage: '' });
+    case 'DELETED_TASKS': {
+      const newTasks = state.tasks.slice();
+      for (let i = 0; i < action.data.length; i += 1) {
+        const taskIndex = newTasks.findIndex((task) => {
+          return task.id == action.data[i];
+        });
+        newTasks.splice(taskIndex, 1);
+      }
+      return Object.assign({}, state, { tasks: newTasks });
+    }
+    case 'DELETED_TASK': {
+      const newTasks = state.tasks.filter((task) => {
+        return task.id != action.data;
+      });
+      return Object.assign({}, state, { tasks: newTasks });
+    }
     default:
       return state;
   }

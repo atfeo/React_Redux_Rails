@@ -13,6 +13,8 @@ class TodoApp extends React.Component {
     this.handleNewTask = this.handleNewTask.bind(this);
     this.handleInputForm = this.handleInputForm.bind(this);
     this.handleTaskCompletionChange = this.handleTaskCompletionChange.bind(this);
+    this.handleDeleteTasks = this.handleDeleteTasks.bind(this);
+    this.handleDeleteTask = this.handleDeleteTask.bind(this);
   }
 
   componentDidMount() {
@@ -31,6 +33,23 @@ class TodoApp extends React.Component {
     this.props.dispatch(actions.toggleComplete(id, isComplete))
   }
 
+  complete(task) {
+    return task.isComplete == true
+  }
+
+  handleDeleteTasks() {
+    let ids = [];
+    const comp = this.props.tasks.filter((task) => this.complete(task));
+    for (let i = 0; i < comp.length; i += 1) {
+      ids[i] = comp[i].id;
+    }
+    this.props.dispatch(actions.deleteTasks(ids));
+  }
+
+  handleDeleteTask(id) {
+    this.props.dispatch(actions.deleteTask(id))
+  }
+
   render() {
     return (
       <div>
@@ -41,6 +60,14 @@ class TodoApp extends React.Component {
           objects={this.props.tasks}
           istext={this.props.isText}
         />
+        <button
+          className="del"
+          onClick={this.handleDeleteTasks}
+          disabled={this.props.tasks.filter(this.complete).length == 0}
+        >
+          Del Tasks X {this.props.tasks.filter(this.complete).length}
+        </button>
+        <div style={{ clear: "both" }} />
         {this.props.isError ? <ErrorMessage
           message={this.props.errorMessage}
         /> : null}
@@ -48,6 +75,7 @@ class TodoApp extends React.Component {
         <TaskList
           tasks={this.props.tasks}
           handlecheck={this.handleTaskCompletionChange}
+          handledeletetask={this.handleDeleteTask}
         />
       </div>
     );

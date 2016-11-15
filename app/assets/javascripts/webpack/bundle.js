@@ -93,6 +93,29 @@
 	      return Object.assign({}, state, { isError: true, errorMessage: action.data });
 	    case 'HIDE_ERROR':
 	      return Object.assign({}, state, { isError: false, errorMessage: '' });
+	    case 'DELETED_TASKS':
+	      {
+	        var _newTasks = state.tasks.slice();
+
+	        var _loop = function _loop(i) {
+	          var taskIndex = _newTasks.findIndex(function (task) {
+	            return task.id == action.data[i];
+	          });
+	          _newTasks.splice(taskIndex, 1);
+	        };
+
+	        for (var i = 0; i < action.data.length; i += 1) {
+	          _loop(i);
+	        }
+	        return Object.assign({}, state, { tasks: _newTasks });
+	      }
+	    case 'DELETED_TASK':
+	      {
+	        var _newTasks2 = state.tasks.filter(function (task) {
+	          return task.id != action.data;
+	        });
+	        return Object.assign({}, state, { tasks: _newTasks2 });
+	      }
 	    default:
 	      return state;
 	  }
@@ -23305,6 +23328,8 @@
 	    _this.handleNewTask = _this.handleNewTask.bind(_this);
 	    _this.handleInputForm = _this.handleInputForm.bind(_this);
 	    _this.handleTaskCompletionChange = _this.handleTaskCompletionChange.bind(_this);
+	    _this.handleDeleteTasks = _this.handleDeleteTasks.bind(_this);
+	    _this.handleDeleteTask = _this.handleDeleteTask.bind(_this);
 	    return _this;
 	  }
 
@@ -23329,6 +23354,30 @@
 	      this.props.dispatch(_actions2.default.toggleComplete(id, isComplete));
 	    }
 	  }, {
+	    key: 'complete',
+	    value: function complete(task) {
+	      return task.isComplete == true;
+	    }
+	  }, {
+	    key: 'handleDeleteTasks',
+	    value: function handleDeleteTasks() {
+	      var _this2 = this;
+
+	      var ids = [];
+	      var comp = this.props.tasks.filter(function (task) {
+	        return _this2.complete(task);
+	      });
+	      for (var i = 0; i < comp.length; i += 1) {
+	        ids[i] = comp[i].id;
+	      }
+	      this.props.dispatch(_actions2.default.deleteTasks(ids));
+	    }
+	  }, {
+	    key: 'handleDeleteTask',
+	    value: function handleDeleteTask(id) {
+	      this.props.dispatch(_actions2.default.deleteTask(id));
+	    }
+	  }, {
 	    key: 'render',
 	    value: function render() {
 	      return _react2.default.createElement(
@@ -23345,13 +23394,25 @@
 	          objects: this.props.tasks,
 	          istext: this.props.isText
 	        }),
+	        _react2.default.createElement(
+	          'button',
+	          {
+	            className: 'del',
+	            onClick: this.handleDeleteTasks,
+	            disabled: this.props.tasks.filter(this.complete).length == 0
+	          },
+	          'Del Tasks X ',
+	          this.props.tasks.filter(this.complete).length
+	        ),
+	        _react2.default.createElement('div', { style: { clear: "both" } }),
 	        this.props.isError ? _react2.default.createElement(_errorMessage2.default, {
 	          message: this.props.errorMessage
 	        }) : null,
 	        this.props.isLoading ? _react2.default.createElement(_loadingIndicator2.default, null) : null,
 	        _react2.default.createElement(_taskList2.default, {
 	          tasks: this.props.tasks,
-	          handlecheck: this.handleTaskCompletionChange
+	          handlecheck: this.handleTaskCompletionChange,
+	          handledeletetask: this.handleDeleteTask
 	        })
 	      );
 	    }
@@ -23388,7 +23449,9 @@
 	  loadTasks: loadTasks,
 	  addTask: addTask,
 	  textExists: textExists,
-	  toggleComplete: toggleComplete
+	  toggleComplete: toggleComplete,
+	  deleteTasks: deleteTasks,
+	  deleteTask: deleteTask
 	};
 
 	function loadTasks() {
@@ -23492,6 +23555,53 @@
 	  };
 	}
 
+	function deleteTasks(ids) {
+	  return function (dispatch) {
+	    $.ajax({
+	      url: '/api/tasks/del_tasks',
+	      type: 'DELETE',
+	      dataType: 'json',
+	      data: { ids: ids },
+	      success: function success() {
+	        dispatch(deletedTasks(ids));
+	      },
+	      error: function error(xhr, status, err) {
+	        dispatch(tempErrorMessage('API Error'));
+	        dispatch(toggleLoading(false));
+	        console.log('/api/tasks/del_tasks', status, err.toString());
+	      }
+	    });
+	  };
+	}
+
+	function deletedTasks(ids) {
+	  return { type: 'DELETED_TASKS', data: ids };
+	}
+
+	function deleteTask(id) {
+	  return function (dispatch) {
+	    dispatch(toggleLoading(true));
+	    $.ajax({
+	      url: '/api/tasks/' + id,
+	      type: 'DELETE',
+	      dataType: 'json',
+	      success: function success() {
+	        dispatch(deletedTask(id));
+	        dispatch(toggleLoading(false));
+	      },
+	      error: function error(xhr, status, err) {
+	        dispatch(tempErrorMessage('API Error'));
+	        dispatch(toggleLoading(false));
+	        console.log('/api/tasks/del_tasks', status, err.toString());
+	      }
+	    });
+	  };
+	}
+
+	function deletedTask(id) {
+	  return { type: 'DELETED_TASK', data: id };
+	}
+
 /***/ },
 /* 205 */
 /***/ function(module, exports, __webpack_require__) {
@@ -23525,6 +23635,7 @@
 	    var _this = _possibleConstructorReturn(this, (TaskList.__proto__ || Object.getPrototypeOf(TaskList)).call(this, props));
 
 	    _this.handleCheck = _this.handleCheck.bind(_this);
+	    _this.handleClick = _this.handleClick.bind(_this);
 	    return _this;
 	  }
 
@@ -23532,6 +23643,11 @@
 	    key: "handleCheck",
 	    value: function handleCheck(e) {
 	      this.props.handlecheck(e.target.id, e.target.checked);
+	    }
+	  }, {
+	    key: "handleClick",
+	    value: function handleClick(e) {
+	      this.props.handledeletetask(e.target.id);
 	    }
 	  }, {
 	    key: "render",
@@ -23555,7 +23671,17 @@
 	                onChange: _this2.handleCheck
 	              }),
 	              task.name
-	            )
+	            ),
+	            task.isComplete ? _react2.default.createElement(
+	              "button",
+	              {
+	                className: "del",
+	                id: task.id,
+	                onClick: _this2.handleClick,
+	                style: { float: "right" }
+	              },
+	              "Del"
+	            ) : null
 	          );
 	        })
 	      );
@@ -23672,7 +23798,10 @@
 
 	      return _react2.default.createElement(
 	        'form',
-	        { onSubmit: this.handleSubmit },
+	        {
+	          onSubmit: this.handleSubmit,
+	          style: { float: "left" }
+	        },
 	        _react2.default.createElement('input', {
 	          type: 'text',
 	          ref: function ref(_ref) {
@@ -23683,7 +23812,8 @@
 	        _react2.default.createElement(
 	          'button',
 	          {
-	            type: 'submit', disabled: !this.props.istext
+	            type: 'submit',
+	            disabled: !this.props.istext
 	          },
 	          'Add Task # ',
 	          this.props.objects.length + 1

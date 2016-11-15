@@ -22,9 +22,28 @@ class Api::TasksController < ApplicationController
     end
   end
 
+  def del_tasks
+    ids = params[:ids]
+    ids.each do |id|
+      if Task.find(id).destroy
+        head :no_content
+      else
+        head :unprocessable_entity
+      end
+    end
+  end
+
+  def destroy
+    if Task.find(params[:id]).destroy
+      head :no_content
+    else
+      head :unprocessable_entity
+    end
+  end
+
   private
 
   def task_params
-    params.permit(:name, :isComplete)
+    params.permit(:name, :isComplete, :ids)
   end
 end

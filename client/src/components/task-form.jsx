@@ -19,14 +19,18 @@ export default class TaskForm extends React.Component {
 
   render() {
     return (
-      <form onSubmit={this.handleSubmit}>
+      <form
+        onSubmit={this.handleSubmit}
+        style={{ float: "left" }}
+      >
         <input
           type="text"
           ref={(ref) => this.newTask = ref}
           onKeyUp={this.handleKeyup} placeholder="new task"
         />
         <button
-          type="submit" disabled={!this.props.istext}
+          type="submit"
+          disabled={!this.props.istext}
         >
           Add Task # {this.props.objects.length + 1}
         </button>
